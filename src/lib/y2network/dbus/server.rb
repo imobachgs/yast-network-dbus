@@ -29,7 +29,7 @@ module Y2Network
       #
       # Starts a DBus service.
       def run
-        bus = ::DBus::session_bus
+        bus = ::DBus::system_bus
         service = bus.request_service("org.opensuse.YaST2.Network")
         network_config = Y2Network::Config.from(:sysconfig)
 

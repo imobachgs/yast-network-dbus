@@ -6,12 +6,10 @@ Wicked.
 
 ## Running the Service
 
-For the time being, it uses the session bus. Just run the following command to start
-the server:
+In order to allow reading/writing the network configuration, you need to run this server as root. It will use the system bus so you need to copy `data/org.opensuse.YaST2.Network.conf` to `/etc/dbus-1/system.d` directory and reload the `dbus` service.
+
+After that, you can run the server by just typing:
 
 ```sh
-rake start
+# rake start
 ```
-
-There are plans to make it run as root (as YaST2 does) and connected to the
-system bus so it actually can apply changes to the configuration.
