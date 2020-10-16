@@ -38,11 +38,7 @@ module Y2Network
       dbus_interface "org.opensuse.YaST2.Network" do
         dbus_method :GetInterfaces, "out interfaces:aa{sv}" do
           ifaces = network.interfaces.map do |iface|
-            {
-              "Name"        => iface.name,
-              "Description" => iface.description,
-              "Type"        => iface.type.short_name # it should use a number
-            }
+            interface_data(iface)
           end
           [ifaces]
         end
@@ -52,10 +48,33 @@ module Y2Network
             {
               "Id"          => conn.id,
               "Name"        => conn.name,
-	      "Description" => conn.description.to_s
+              "Description" => conn.description.to_s
             }
           end
           [conns]
+        end
+
+        private
+
+        def interface_data(iface)
+          data = {
+            "Name"        => iface.name,
+            "Description" => iface.description,
+            "Type"        => iface.type.short_name, # it should use a number
+          }
+
+          additional =
+            if iface.hardware
+              {
+                "Mac"     => iface.hardware.mac,
+                "Driver"  => iface.hardware.driver,
+                "Virtual" => false
+              }
+            else
+              { "Virtual" => true }
+            end
+
+          data.merge(additional)
         end
       end
     end
