@@ -46,11 +46,7 @@ module Y2Network
 
         dbus_method :GetConnections, "out connections:aa{sv}" do
           conns = network.connections.map do |conn|
-            {
-              "Id"          => conn.id,
-              "Name"        => conn.name,
-              "Description" => conn.description.to_s
-            }
+            connection_data(conn)
           end
           log_method("GetConnections", [conns])
           [conns]
@@ -65,11 +61,12 @@ module Y2Network
             "Type"        => iface.type.short_name, # it should use a number
           }
 
+          hardware = iface.hardware
           additional =
-            if iface.hardware
+            if hardware
               {
-                "Mac"     => iface.hardware.mac,
-                "Driver"  => iface.hardware.driver,
+                "Mac"     => hardware.mac,
+                "Driver"  => hardware.driver,
                 "Virtual" => false
               }
             else
@@ -77,6 +74,38 @@ module Y2Network
             end
 
           data.merge(additional)
+        end
+
+        def connection_data(conn)
+          data = {
+            "Id"          => conn.id,
+            "Name"        => conn.name,
+            "Description" => conn.description.to_s,
+            "BootProto"   => conn.bootproto.name,
+            "StartMode"   => conn.startmode.name,
+            "Virtual"     => conn.virtual?,
+            "Type"        => conn.type.short_name,
+          }
+
+          data.merge!(ip_config_data(conn.ip)) if conn.ip
+          data.merge(connection_data_by_type(conn))
+        end
+
+        def connection_data_by_type(conn)
+          type_method = "#{conn.type.short_name}_connection_data".to_sym
+          return {} unless respond_to?(type_method, true)
+          send(type_method, conn)
+        end
+
+        def bond_connection_data(conn)
+          { "Interfaces" => [ conn.slaves ] }
+        end
+
+        def ip_config_data(ip_config)
+          {
+            "IP"    => ip_config.address.to_s,
+            "Label" => ip_config.label.to_s
+          }
         end
 
         def log_method(name, response)
