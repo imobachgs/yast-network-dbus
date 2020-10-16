@@ -65,7 +65,7 @@ module Y2Network
           additional =
             if hardware
               {
-                "Mac"     => hardware.mac,
+                "Mac"     => hardware.mac.to_s,
                 "Driver"  => hardware.driver,
                 "Virtual" => false
               }
