@@ -40,6 +40,7 @@ module Y2Network
           ifaces = network.interfaces.map do |iface|
             interface_data(iface)
           end
+          log_method("GetInterfaces", [ifaces])
           [ifaces]
         end
 
@@ -51,6 +52,7 @@ module Y2Network
               "Description" => conn.description.to_s
             }
           end
+          log_method("GetConnections", [conns])
           [conns]
         end
 
@@ -75,6 +77,10 @@ module Y2Network
             end
 
           data.merge(additional)
+        end
+
+        def log_method(name, response)
+          puts "#{name}: #{response.inspect}"
         end
       end
     end
