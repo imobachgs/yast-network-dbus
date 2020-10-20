@@ -18,6 +18,8 @@
 # find current contact information at www.suse.com.
 
 require "y2network/connection_config/base"
+require "y2network/connection_config/ip_config"
+require "y2network/ip_address"
 require "forwardable"
 
 module Y2Network
@@ -73,8 +75,8 @@ module Y2Network
           connection.startmode = startmode if startmode
 
           if data["IP"]
-            connection.ip = Y2Network::IPConfig.new(
-              Y2Network::IPAddress.from_string(data["IP"], label: data["Label"])
+            connection.ip = Y2Network::ConnectionConfig::IPConfig.new(
+              Y2Network::IPAddress.from_string(data["IP"]), label: data["Label"]
             )
           end
         end
