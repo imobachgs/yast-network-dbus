@@ -56,4 +56,24 @@ describe Y2Network::DBus::ConnectionConfig::Base do
       )
     end
   end
+
+  describe "#from_dbus" do
+    let(:dbus_data) do
+      {
+        "Name" => "eth1",
+        "BootProto" => "static",
+        "StartMode" => "ifplugd"
+      }
+    end
+
+    it "sets connection properties according to D-Bus data" do
+      subject.from_dbus(dbus_data)
+      updated_conn = subject.connection
+      expect(updated_conn.name).to eq("eth1")
+      expect(updated_conn.startmode).to eq(Y2Network::Startmode.create("ifplugd"))
+      expect(updated_conn.bootproto).to eq(Y2Network::BootProtocol.from_name("static"))
+      expect(updated_conn.ip.address.to_s).to eq("192.168.1.1/24")
+      expect(updated_conn.ip.label).to eq("default")
+    end
+  end
 end

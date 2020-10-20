@@ -18,7 +18,10 @@
 # find current contact information at www.suse.com.
 
 require "dbus"
+require "yast"
 require "y2network/dbus/network_config"
+
+Yast.import "Lan"
 
 module Y2Network
   module DBus
@@ -45,8 +48,30 @@ module Y2Network
 
         dbus_method :GetConnections, "out connections:aa{sv}" do
           conns = network.connections.map(&:to_dbus)
-          log_method("GetConnections", [conns])
+          log_method("GetConnections", conns)
           [conns]
+        end
+
+        dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, updated conn:a{sv}" do |name, data|
+          new_network = network.copy
+          conn = new_network.connections.find { |c| c.name == name }
+          conn.from_dbus(data)
+          new_network.write(original: network, only: [:connections])
+          log_method("UpdateConnection", conn)
+          [conn.to_dbus]
+        end
+
+        dbus_method :UpdateConnections, "in conns:a{sv}, updated conn:a{sv}" do |conns|
+          new_network = network.copy
+          updated_conns = []
+          conns.each do |name, data|
+            conn = new_network.connections.find { |c| c.name == name }
+            conn.from_dbus(data)
+            updated_conns << conn.to_dbus
+          end
+          new_network.write(original: network, only: [:connections])
+          log_method("UpdateConnections", updated_conns)
+          [updated_conns]
         end
 
         private

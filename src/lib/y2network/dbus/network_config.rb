@@ -58,6 +58,24 @@ module Y2Network
 
         @interfaces = Y2Network::InterfacesCollection.new(ifaces)
       end
+
+      # Writes the configuration into the YaST modules
+      #
+      # Writes only changes against original configuration if the original configuration
+      # is provided
+      #
+      # @param original [Y2Network::Config] configuration used for detecting changes
+      # @param only [Array<Symbol>, nil] explicit sections to be written, by default if no
+      #   parameter is given then all changes will be written.
+      #
+      # @see Y2Network::Config#write
+      def write(original: nil, only: nil)
+        config.write(original: original.config, only: only)
+      end
+
+      def copy
+        self.class.new(config.copy)
+      end
     end
   end
 end

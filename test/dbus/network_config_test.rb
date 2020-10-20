@@ -52,4 +52,19 @@ describe Y2Network::DBus::NetworkConfig do
       expect(conn.connection).to eq(eth_conn)
     end
   end
+
+  describe "#write" do
+    let(:original_config) do
+      Y2Network::Config.new(source: :sysconfig)
+    end
+
+    let(:original) { described_class.new(original_config) }
+
+    it "writes the configuration to the system" do
+      expect(config).to receive(:write).with(original: original_config, only: [:connections])
+      subject.write(original: original, only: [:connections])
+    end
+  end
+
+  describe "#copy"
 end
