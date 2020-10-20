@@ -52,7 +52,7 @@ module Y2Network
           [conns]
         end
 
-        dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, updated conn:a{sv}" do |name, data|
+        dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, out updated_conn:a{sv}" do |name, data|
           new_network = network.copy
           conn = new_network.connections.find { |c| c.name == name }
           conn.from_dbus(data)
