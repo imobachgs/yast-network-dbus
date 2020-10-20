@@ -18,6 +18,7 @@
 # find current contact information at www.suse.com.
 
 require "y2network/connection_config/base"
+require "forwardable"
 
 module Y2Network
   module DBus
@@ -27,6 +28,9 @@ module Y2Network
       #
       # @todo Forward methods to the wrapped connection
       class Base
+        extend Forwardable
+        def_delegators :@connection, :name
+
         attr_reader :connection
 
         # @param connection [Y2Network::DBus::ConnectionConfig::Base] Original connection
@@ -47,6 +51,26 @@ module Y2Network
 
           data.merge!(ip_config_data(connection.ip)) if connection.ip
           data.merge(connection_data_by_type)
+        end
+
+        DBUS_TO_METHODS = {
+          "Name"        => :name=,
+          "Description" => :description=
+        }.freeze
+
+        # @param data [Hash] D-Bus data
+        def from_dbus(data)
+          DBUS_TO_METHODS.each do |key, meth|
+            next unless data[key]
+
+            connection.send(meth, data[key])
+          end
+
+          bootproto = Y2Network::BootProtocol.from_name(data["BootProto"]) if data["BootProto"]
+          connection.bootproto = bootproto if bootproto
+
+          startmode = Y2Network::Startmode.create(data["StartMode"]) if data["StartMode"]
+          connection.startmode = startmode if startmode
         end
 
         private
