@@ -61,11 +61,11 @@ module Y2Network
           [conn.to_dbus]
         end
 
-        dbus_method :UpdateConnections, "in conns:a{sv}, updated conn:a{sv}" do |conns|
+        dbus_method :UpdateConnections, "in conns:aa{sv}, out updated_conns:aa{sv}" do |conns|
           new_network = network.copy
           updated_conns = []
-          conns.each do |name, data|
-            conn = new_network.connections.find { |c| c.name == name }
+          conns.each do |data|
+            conn = new_network.connections.find { |c| c.name == data["Name"] }
             conn.from_dbus(data)
             updated_conns << conn.to_dbus
           end
@@ -74,7 +74,7 @@ module Y2Network
           [updated_conns]
         end
 
-        private
+      private
 
         def log_method(name, response)
           puts "#{name}: #{response.inspect}"
