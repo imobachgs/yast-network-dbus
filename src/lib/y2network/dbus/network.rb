@@ -56,7 +56,7 @@ module Y2Network
           new_network = network.copy
           conn = new_network.connections.find { |c| c.name == name }
           conn.from_dbus(data)
-          new_network.write(original: network, only: [:connections])
+          update_configuration(new_network, [:connections])
           log_method("UpdateConnection", conn)
           [conn.to_dbus]
         end
@@ -69,7 +69,7 @@ module Y2Network
             conn.from_dbus(data)
             updated_conns << conn.to_dbus
           end
-          new_network.write(original: network, only: [:connections])
+          update_configuration(new_network, [:connections])
           log_method("UpdateConnections", updated_conns)
           [updated_conns]
         end
@@ -78,6 +78,11 @@ module Y2Network
 
         def log_method(name, response)
           puts "#{name}: #{response.inspect}"
+        end
+
+        def update_configuration(new_config, only)
+          new_config.write(original: network, only: only)
+          @network = new_config
         end
       end
     end
