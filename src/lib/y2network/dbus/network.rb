@@ -18,6 +18,10 @@
 # find current contact information at www.suse.com.
 
 require "dbus"
+require "yast"
+require "y2network/dbus/network_config"
+
+Yast.import "Lan"
 
 module Y2Network
   module DBus
@@ -32,81 +36,45 @@ module Y2Network
       # @param network [Y2Network::Config] Network configuration
       def initialize(path, network)
         super(path)
-        @network = network
+        @network = Y2Network::DBus::NetworkConfig.new(network)
       end
 
       dbus_interface "org.opensuse.YaST2.Network" do
         dbus_method :GetInterfaces, "out interfaces:aa{sv}" do
-          ifaces = network.interfaces.map do |iface|
-            interface_data(iface)
-          end
-          log_method("GetInterfaces", [ifaces])
+          ifaces = network.interfaces.map(&:to_dbus)
+          log_method("GetInterfaces", ifaces)
           [ifaces]
         end
 
         dbus_method :GetConnections, "out connections:aa{sv}" do
-          conns = network.connections.map do |conn|
-            connection_data(conn)
-          end
-          log_method("GetConnections", [conns])
+          conns = network.connections.map(&:to_dbus)
+          log_method("GetConnections", conns)
           [conns]
         end
 
+        dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, updated conn:a{sv}" do |name, data|
+          new_network = network.copy
+          conn = new_network.connections.find { |c| c.name == name }
+          conn.from_dbus(data)
+          new_network.write(original: network, only: [:connections])
+          log_method("UpdateConnection", conn)
+          [conn.to_dbus]
+        end
+
+        dbus_method :UpdateConnections, "in conns:a{sv}, updated conn:a{sv}" do |conns|
+          new_network = network.copy
+          updated_conns = []
+          conns.each do |name, data|
+            conn = new_network.connections.find { |c| c.name == name }
+            conn.from_dbus(data)
+            updated_conns << conn.to_dbus
+          end
+          new_network.write(original: network, only: [:connections])
+          log_method("UpdateConnections", updated_conns)
+          [updated_conns]
+        end
+
         private
-
-        def interface_data(iface)
-          data = {
-            "Name"        => iface.name,
-            "Description" => iface.description,
-            "Type"        => iface.type.short_name, # it should use a number
-          }
-
-          hardware = iface.hardware
-          additional =
-            if hardware
-              {
-                "Mac"     => hardware.mac.to_s,
-                "Driver"  => hardware.driver,
-                "Virtual" => false
-              }
-            else
-              { "Virtual" => true }
-            end
-
-          data.merge(additional)
-        end
-
-        def connection_data(conn)
-          data = {
-            "Id"          => conn.id,
-            "Name"        => conn.name,
-            "Description" => conn.description.to_s,
-            "BootProto"   => conn.bootproto.name,
-            "StartMode"   => conn.startmode.name,
-            "Virtual"     => conn.virtual?,
-            "Type"        => conn.type.short_name,
-          }
-
-          data.merge!(ip_config_data(conn.ip)) if conn.ip
-          data.merge(connection_data_by_type(conn))
-        end
-
-        def connection_data_by_type(conn)
-          type_method = "#{conn.type.short_name}_connection_data".to_sym
-          return {} unless respond_to?(type_method, true)
-          send(type_method, conn)
-        end
-
-        def bond_connection_data(conn)
-          { "Interfaces" => [ conn.slaves ] }
-        end
-
-        def ip_config_data(ip_config)
-          {
-            "IP"    => ip_config.address.to_s,
-            "Label" => ip_config.label.to_s
-          }
-        end
 
         def log_method(name, response)
           puts "#{name}: #{response.inspect}"
