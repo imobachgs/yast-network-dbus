@@ -74,9 +74,9 @@ module Y2Network
           startmode = Y2Network::Startmode.create(data["StartMode"]) if data["StartMode"]
           connection.startmode = startmode if startmode
 
-          if data["IP"]
+          if data["Ip"]
             connection.ip = Y2Network::ConnectionConfig::IPConfig.new(
-              Y2Network::IPAddress.from_string(data["IP"]), label: data["Label"]
+              Y2Network::IPAddress.from_string(data["Ip"]), label: data["Label"]
             )
           end
         end
@@ -97,7 +97,7 @@ module Y2Network
         # @param [Y2Network::IPConfig]
         def ip_config_data(ip_config)
           {
-            "IP"    => ip_config.address.to_s,
+            "Ip"    => ip_config.address.to_s,
             "Label" => ip_config.label.to_s
           }
         end

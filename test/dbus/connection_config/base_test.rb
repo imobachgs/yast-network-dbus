@@ -46,7 +46,7 @@ describe Y2Network::DBus::ConnectionConfig::Base do
       expect(subject.to_dbus).to include(
         "BootProto"   => "static",
         "Description" => "Default connection",
-        "IP"          => "192.168.1.1/24",
+        "Ip"          => "192.168.1.1/24",
         "Id"          => conn.id,
         "Label"       => "default",
         "Name"        => "eth0",
@@ -63,7 +63,7 @@ describe Y2Network::DBus::ConnectionConfig::Base do
         "Name"      => "eth1",
         "BootProto" => "static",
         "StartMode" => "ifplugd",
-        "IP"        => "192.168.1.1/24",
+        "Ip"        => "192.168.1.1/24",
         "Label"     => "private"
       }
     end
