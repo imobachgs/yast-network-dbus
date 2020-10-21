@@ -59,6 +59,30 @@ module Y2Network
         @interfaces = Y2Network::InterfacesCollection.new(ifaces)
       end
 
+      # Returns the list of routes
+      #
+      # @param routes [Array<Y2Network::DBus::Route>]
+      def routes
+        return @routes if @routes
+
+        @routes = routing_table.routes.map { |r| Y2Network::DBus::Route.new(r) }
+      end
+
+      def routes=(value)
+        @routes = value
+        # sync the wrapped network config
+        config.routing.tables.clear
+        config.routing.tables << Y2Network::RoutingTable.new(@routes.map(&:route))
+      end
+
+      # Returns the real interface with the given name
+      #
+      # @param name [String] Interface name
+      # @return [Y2Network::Interface]
+      def find_interface(name)
+        config.interfaces.by_name(name)
+      end
+
       # Writes the configuration into the YaST modules
       #
       # Writes only changes against original configuration if the original configuration
@@ -75,6 +99,18 @@ module Y2Network
 
       def copy
         self.class.new(config.copy)
+      end
+
+      private
+
+      # Returns the routing table
+      #
+      # Although the model supports several routing tables, only one is used
+      # at this point.
+      #
+      # @return [Y2Network::RoutingTable]
+      def routing_table
+        config.routing.tables.first
       end
     end
   end

@@ -20,6 +20,7 @@
 require "dbus"
 require "yast"
 require "y2network/dbus/network_config"
+require "y2network/dbus/route"
 
 Yast.import "Lan"
 
@@ -52,12 +53,33 @@ module Y2Network
           [conns]
         end
 
+        dbus_method :GetRoutes, "out routes:aa{sv}" do
+          routes = network.routes.map(&:to_dbus)
+          log_method("GetRoutes", routes)
+          [routes]
+        end
+
+        dbus_method :UpdateRoutes, "in routes:aa{sv}, out routes:aa{sv}" do |routes|
+          new_network = network.copy
+          new_network.routes = routes.map do |r|
+            new_route = Y2Network::DBus::Route.from_dbus(r)
+            # FIXME: the route does not have visibility of the list of interfaces
+            interface = r["Interface"] ? new_network.find_interface(r["Interface"]) : nil
+            new_route.interface = interface
+            new_route
+          end
+          update_configuration(new_network, [:routing])
+          new_routes = new_network.routes.map(&:to_dbus)
+          log_method("UpdateRoutes", new_routes)
+          [new_routes]
+        end
+
         dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, out updated_conn:a{sv}" do |name, data|
           new_network = network.copy
           conn = new_network.connections.find { |c| c.name == name }
           conn.from_dbus(data)
           update_configuration(new_network, [:connections])
-          log_method("UpdateConnection", conn)
+          log_method("UpdateConnection", conn.to_dbus)
           [conn.to_dbus]
         end
 
