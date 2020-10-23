@@ -35,6 +35,15 @@ module Y2Network
 
         attr_reader :connection
 
+        class << self
+          def from_dbus(data, connection: nil)
+            connection ||= Y2Network::ConnectionConfig::Ethernet.new
+            result = new(connection)
+            result.from_dbus(data)
+            result
+          end
+        end
+
         # @param connection [Y2Network::DBus::ConnectionConfig::Base] Original connection
         def initialize(connection)
           @connection = connection

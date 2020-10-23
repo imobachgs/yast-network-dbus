@@ -28,12 +28,21 @@ module Y2Network
     class Interface
       attr_reader :interface
 
+      class << self
+        def create_virtual(data)
+          iface = Y2Network::VirtualInterface.new(data["Name"])
+          virtual = new(iface)
+          virtual.from_dbus(data.merge("Virtual" => true))
+          virtual
+        end
+      end
+
       # @param interface [Y2Network::Interface] Network interface
       def initialize(interface)
         @interface = interface
       end
 
-      # Returns interface DBus data in a hash
+      # Returns a hash containing the interfaces DBus data
       #
       # @return [Hash<String,Object>]
       def to_dbus
@@ -56,6 +65,12 @@ module Y2Network
           end
 
         data.merge(additional)
+      end
+
+      def from_dbus(data)
+        interface.name = data["Name"] if data["Name"]
+        interface.description = data["Description"] if data["Description"]
+        interface.type = Y2Network::InterfaceType.from_short_name(data["Type"]) if data["Type"]
       end
     end
   end

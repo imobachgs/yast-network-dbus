@@ -19,7 +19,6 @@
 
 require "dbus"
 require "yast"
-require "y2network/dbus/network_config"
 require "y2network/dbus/route"
 
 Yast.import "Lan"
@@ -37,65 +36,84 @@ module Y2Network
       # @param network [Y2Network::Config] Network configuration
       def initialize(path, network)
         super(path)
-        @network = Y2Network::DBus::NetworkConfig.new(network)
+        @network = network
       end
 
       dbus_interface "org.opensuse.YaST2.Network" do
         dbus_method :GetInterfaces, "out interfaces:aa{sv}" do
-          ifaces = network.interfaces.map(&:to_dbus)
-          log_method("GetInterfaces", ifaces)
-          [ifaces]
+          response = network.interfaces.map do |iface|
+            Y2Network::DBus::Interface.new(iface).to_dbus
+          end
+          log_method("GetInterfaces", response)
+          [response]
         end
 
         dbus_method :GetConnections, "out connections:aa{sv}" do
-          conns = network.connections.map(&:to_dbus)
-          log_method("GetConnections", conns)
-          [conns]
+          response = network.connections.map do |conn|
+            Y2Network::DBus::ConnectionConfig::Base.new(conn).to_dbus
+          end
+          log_method("GetConnections", response)
+          [response]
         end
 
         dbus_method :GetRoutes, "out routes:aa{sv}" do
-          routes = network.routes.map(&:to_dbus)
-          log_method("GetRoutes", routes)
-          [routes]
+          response = network.routing.routes.map do |route|
+            Y2Network::DBus::Route.new(route).to_dbus
+          end
+          log_method("GetRoutes", response)
+          [response]
         end
 
         dbus_method :UpdateRoutes, "in routes:aa{sv}, out routes:aa{sv}" do |routes|
-          new_network = network.copy
-          new_network.routes = routes.map do |r|
-            new_route = Y2Network::DBus::Route.from_dbus(r)
-            # FIXME: the route does not have visibility of the list of interfaces
-            interface = r["Interface"] ? new_network.find_interface(r["Interface"]) : nil
-            new_route.interface = interface
-            new_route
+          response = update_network_config([:routing]) do |config|
+            routes = routes.map do |r|
+              new_route = Y2Network::DBus::Route.from_dbus(r)
+              # FIXME: the route does not have visibility of the list of interfaces
+              interface = r["Interface"] ? config.interfaces.by_name(r["Interface"]) : nil
+              new_route.interface = interface
+              new_route
+            end
+
+            routing_table = Y2Network::RoutingTable.new(routes.map(&:route))
+            config.routing.tables.clear
+            config.routing.tables << routing_table
+            routes.map(&:to_dbus)
           end
-          update_configuration(new_network, [:routing])
-          new_routes = new_network.routes.map(&:to_dbus)
-          log_method("UpdateRoutes", new_routes)
-          [new_routes]
+
+          log_method("UpdateRoutes", response)
+          [response]
         end
 
         dbus_method :UpdateConnections, "in conns:aa{sv}, out updated_conns:aa{sv}" do |conns|
-          new_network = network.copy
-          updated_conns = []
-          conns.each do |data|
-            conn = new_network.connections.find { |c| c.name == data["Name"] }
-            conn.from_dbus(data)
-            updated_conns << conn.to_dbus
+          response = update_network_config([:connections]) do |config|
+            new_connections = conns.map do |data|
+              conn = config.connections.find { |c| c.name == data["Name"] }
+              Y2Network::DBus::ConnectionConfig::Base.from_dbus(data, connection: conn)
+            end
+
+            new_connections.each do |c|
+              config.add_or_update_connection_config(c.connection)
+            end
+
+            new_connections.map(&:to_dbus)
           end
-          update_configuration(new_network, [:connections])
-          log_method("UpdateConnections", updated_conns)
-          [updated_conns]
+
+          log_method("UpdateConnections", response)
+          [response]
         end
 
       private
 
-        def log_method(name, response)
-          puts "#{name}: #{response.inspect}"
+        def update_network_config(only, &block)
+          new_network = network.copy
+          response = block.call(new_network)
+          new_network.write(original: network, only: only)
+          @network = new_network
+          response
         end
 
-        def update_configuration(new_config, only)
-          new_config.write(original: network, only: only)
-          @network = new_config
+        def log_method(name, response)
+          puts "#{name}: #{response.inspect}"
         end
       end
     end
