@@ -20,6 +20,8 @@
 require "dbus"
 require "yast"
 require "y2network/dbus/route"
+require "y2network/dbus/connection_config"
+require "y2network/dbus/interface"
 
 Yast.import "Lan"
 
@@ -50,7 +52,7 @@ module Y2Network
 
         dbus_method :GetConnections, "out connections:aa{sv}" do
           response = network.connections.map do |conn|
-            Y2Network::DBus::ConnectionConfig::Base.new(conn).to_dbus
+            Y2Network::DBus::ConnectionConfig.from_connection(conn).to_dbus
           end
           log_method("GetConnections", response)
           [response]
@@ -85,10 +87,10 @@ module Y2Network
         end
 
         dbus_method :UpdateConnections, "in conns:aa{sv}, out updated_conns:aa{sv}" do |conns|
-          response = update_network_config([:connections]) do |config|
+          response = update_network_config([:interfaces, :connections]) do |config|
             new_connections = conns.map do |data|
               conn = config.connections.find { |c| c.name == data["Name"] }
-              Y2Network::DBus::ConnectionConfig::Base.from_dbus(data, connection: conn)
+              Y2Network::DBus::ConnectionConfig.from_dbus(data, connection: conn)
             end
 
             new_connections.each do |c|

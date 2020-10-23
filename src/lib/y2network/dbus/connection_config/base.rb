@@ -17,7 +17,7 @@
 # To contact SUSE LLC about this file by physical or electronic mail, you may
 # find current contact information at www.suse.com.
 
-require "y2network/connection_config/base"
+require "y2network/connection_config"
 require "y2network/connection_config/ip_config"
 require "y2network/ip_address"
 require "forwardable"
@@ -36,11 +36,9 @@ module Y2Network
         attr_reader :connection
 
         class << self
-          def from_dbus(data, connection: nil)
-            connection ||= Y2Network::ConnectionConfig::Ethernet.new
-            result = new(connection)
-            result.from_dbus(data)
-            result
+          def connection_class
+            class_name = name.split("::").last
+            Y2Network::ConnectionConfig.const_get(class_name)
           end
         end
 
@@ -66,6 +64,7 @@ module Y2Network
 
         DBUS_TO_METHODS = {
           "Name"        => :name=,
+          "Interface"    => :interface=,
           "Description" => :description=
         }.freeze
 
@@ -77,6 +76,7 @@ module Y2Network
             connection.send(meth, data[key])
           end
 
+          connection.interface ||= connection.name
           bootproto = Y2Network::BootProtocol.from_name(data["BootProto"]) if data["BootProto"]
           connection.bootproto = bootproto if bootproto
 
