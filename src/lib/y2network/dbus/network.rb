@@ -74,15 +74,6 @@ module Y2Network
           [new_routes]
         end
 
-        dbus_method :UpdateConnection, "in name:s, in conn:a{sv}, out updated_conn:a{sv}" do |name, data|
-          new_network = network.copy
-          conn = new_network.connections.find { |c| c.name == name }
-          conn.from_dbus(data)
-          update_configuration(new_network, [:connections])
-          log_method("UpdateConnection", conn.to_dbus)
-          [conn.to_dbus]
-        end
-
         dbus_method :UpdateConnections, "in conns:aa{sv}, out updated_conns:aa{sv}" do |conns|
           new_network = network.copy
           updated_conns = []
